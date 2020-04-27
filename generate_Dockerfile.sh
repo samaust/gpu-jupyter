@@ -4,7 +4,7 @@ cd $(cd -P -- "$(dirname -- "$0")" && pwd -P)
 # Set the path of the generated Dockerfile
 export DOCKERFILE=".build/Dockerfile"
 export STACKS_DIR=".build/docker-stacks"
-export HEAD_COMMIT="c1c32938438151c7e2a22b5aa338caba2ec01da2"
+export HEAD_COMMIT="bca04790b49258961a31d61049f1bbd0be089df3"
 
 while [[ "$#" -gt 0 ]]; do case $1 in
   -c|--commit) HEAD_COMMIT="$2"; shift;;

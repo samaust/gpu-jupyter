@@ -1,12 +1,13 @@
-RUN pip install --upgrade jupyterlab-git==0.10.0 \
-                          folium \
-                          plotly \
+RUN conda install --quiet --yes 'xeus-python=0.7.1' 'ptvsd' -c conda-forge \
+  && pip install --upgrade jupyterlab-git==0.20.0rc0 folium plotly nbdev \
   && export NODE_OPTIONS=--max-old-space-size=4096 \
-  && jupyter labextension install plotlywidget@1.5.4 --no-build \
-  && jupyter labextension install jupyterlab-plotly@1.5.4 --no-build \
+  && jupyter labextension install plotlywidget@4.6.0 --no-build \
+  && jupyter labextension install jupyterlab-plotly@4.6.0 --no-build \
+  && jupyter labextension install @jupyterlab/debugger@0.2.0 --no-build \
   && jupyter serverextension enable --py jupyterlab_git --sys-prefix \
   && jupyter lab build \
   && jupyter labextension list \
   && unset NODE_OPTIONS \
+  && conda clean --all -f -y \
   && fix-permissions $CONDA_DIR \
   && fix-permissions /home/$NB_USER

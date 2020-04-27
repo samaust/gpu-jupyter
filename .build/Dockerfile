@@ -13,7 +13,8 @@ LABEL maintainer="Christoph Schranz <christoph.schranz@salzburgresearch.at>"
 
 # Ubuntu 18.04 (bionic)
 # https://hub.docker.com/_/ubuntu/?tab=tags&name=bionic
-ARG ROOT_CONTAINER=ubuntu:bionic-20200112@sha256:bc025862c3e8ec4a8754ea4756e33da6c41cba38330d7e324abd25c8e0b93300
+# OS/ARCH: linux/amd64
+ARG ROOT_CONTAINER=ubuntu:bionic-20200311@sha256:e5dd9dbb37df5b731a6688fa49f4003359f6f126958c9c928f937bec69836320
 
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 ARG NB_USER="jovyan"
@@ -68,7 +69,7 @@ RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
     chown $NB_USER:$NB_GID $CONDA_DIR && \
     chmod g+w /etc/passwd && \
     fix-permissions $HOME && \
-    fix-permissions "$(dirname $CONDA_DIR)"
+    fix-permissions $CONDA_DIR
 
 USER $NB_UID
 WORKDIR $HOME
@@ -79,19 +80,20 @@ RUN mkdir /home/$NB_USER/work && \
     fix-permissions /home/$NB_USER
 
 # Install conda as jovyan and check the md5 sum provided on the download site
-ENV MINICONDA_VERSION=4.7.12.1 \
-    MINICONDA_MD5=81c773ff87af5cfac79ab862942ab6b3 \
-    CONDA_VERSION=4.7.12
+ENV MINICONDA_VERSION=4.8.2 \
+    MINICONDA_MD5=87e77f097f6ebb5127c77662dfc3165e \
+    CONDA_VERSION=4.8.2
 
 RUN cd /tmp && \
-    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
-    echo "${MINICONDA_MD5} *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
-    /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
-    rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "${MINICONDA_MD5} *Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    /bin/bash Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+    rm Miniconda3-py37_${MINICONDA_VERSION}-Linux-x86_64.sh && \
     echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
     conda config --system --prepend channels conda-forge && \
     conda config --system --set auto_update_conda false && \
     conda config --system --set show_channel_urls true && \
+    conda config --system --set channel_priority strict && \
     if [ ! $PYTHON_VERSION = 'default' ]; then conda install --yes python=$PYTHON_VERSION; fi && \
     conda list python | grep '^python ' | tr -s ' ' | cut -d '.' -f 1,2 | sed 's/$/.*/' >> $CONDA_DIR/conda-meta/pinned && \
     conda install --quiet --yes conda && \
@@ -118,7 +120,7 @@ RUN conda install --quiet --yes 'tini=0.18.0' && \
 RUN conda install --quiet --yes \
     'notebook=6.0.3' \
     'jupyterhub=1.1.0' \
-    'jupyterlab=1.2.5' && \
+    'jupyterlab=2.0.1' && \
     conda clean --all -f -y && \
     npm cache clean --force && \
     jupyter notebook --generate-config && \
@@ -134,9 +136,7 @@ ENTRYPOINT ["tini", "-g", "--"]
 CMD ["start-notebook.sh"]
 
 # Copy local files as late as possible to avoid cache busting
-COPY start.sh /usr/local/bin/
-COPY start-notebook.sh /usr/local/bin/
-COPY start-singleuser.sh /usr/local/bin/
+COPY start.sh start-notebook.sh start-singleuser.sh /usr/local/bin/
 COPY jupyter_notebook_config.py /etc/jupyter/
 
 # Fix permissions on /etc/jupyter as root
@@ -160,7 +160,8 @@ USER root
 # Install all OS dependencies for fully functional notebook server
 RUN apt-get update && apt-get install -yq --no-install-recommends \
     build-essential \
-    emacs \
+    emacs-nox \
+    vim-tiny \
     git \
     inkscape \
     jed \
@@ -196,9 +197,9 @@ LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 USER root
 
-# ffmpeg for matplotlib anim
+# ffmpeg for matplotlib anim & dvipng for latex labels
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends ffmpeg dvipng && \
     rm -rf /var/lib/apt/lists/*
 
 USER $NB_UID
@@ -207,28 +208,32 @@ USER $NB_UID
 RUN conda install --quiet --yes \
     'beautifulsoup4=4.8.*' \
     'conda-forge::blas=*=openblas' \
-    'bokeh=1.4.*' \
-    'cloudpickle=1.2.*' \
+    'bokeh=2.0.*' \
+    'bottleneck=1.3.*' \
+    'cloudpickle=1.3.*' \
     'cython=0.29.*' \
-    'dask=2.9.*' \
+    'dask=2.14.*' \
     'dill=0.3.*' \
     'h5py=2.10.*' \
     'hdf5=1.10.*' \
     'ipywidgets=7.5.*' \
-    'matplotlib-base=3.1.*' \
+    'ipympl=0.5.*'\
+    'matplotlib-base=3.2.*' \
     'numba=0.48.*' \
     'numexpr=2.7.*' \
-    'pandas=0.25.*' \
+    'pandas=1.0.*' \
     'patsy=0.5.*' \
     'protobuf=3.11.*' \
+    'pytables=3.6.*' \
     'scikit-image=0.16.*' \
     'scikit-learn=0.22.*' \
     'scipy=1.4.*' \
-    'seaborn=0.9.*' \
+    'seaborn=0.10.*' \
     'sqlalchemy=1.3.*' \
     'statsmodels=0.11.*' \
     'sympy=1.5.*' \
     'vincent=0.4.*' \
+    'widgetsnbextension=3.5.*'\
     'xlrd' \
     && \
     conda clean --all -f -y && \
@@ -237,11 +242,12 @@ RUN conda install --quiet --yes \
     # Also activate ipywidgets extension for JupyterLab
     # Check this URL for most recent compatibilities
     # https://github.com/jupyter-widgets/ipywidgets/tree/master/packages/jupyterlab-manager
-    jupyter labextension install @jupyter-widgets/jupyterlab-manager@^1.0.1 --no-build && \
-    jupyter labextension install jupyterlab_bokeh@1.0.0 --no-build && \
-    jupyter lab build && \
+    jupyter labextension install @jupyter-widgets/jupyterlab-manager@^2.0.0 --no-build && \
+    jupyter labextension install @bokeh/jupyter_bokeh@^2.0.0 --no-build && \
+    jupyter labextension install jupyter-matplotlib@^0.7.2 --no-build && \
+    jupyter lab build -y && \
+    jupyter lab clean -y && \
     npm cache clean --force && \
-    rm -rf $CONDA_DIR/share/jupyter/lab/staging && \
     rm -rf /home/$NB_USER/.cache/yarn && \
     rm -rf /home/$NB_USER/.node-gyp && \
     fix-permissions $CONDA_DIR && \
@@ -313,11 +319,11 @@ USER $NB_UID
 
 # R packages including IRKernel which gets installed globally.
 RUN conda install --quiet --yes \
-    'r-base=3.6.2' \
+    'r-base=3.6.3' \
     'r-caret=6.0*' \
     'r-crayon=1.3*' \
     'r-devtools=2.2*' \
-    'r-forecast=8.10*' \
+    'r-forecast=8.11*' \
     'r-hexbin=1.28*' \
     'r-htmltools=0.4*' \
     'r-htmlwidgets=1.5*' \
@@ -328,8 +334,8 @@ RUN conda install --quiet --yes \
     'r-rcurl=1.98*' \
     'r-reshape2=1.4*' \
     'r-rmarkdown=2.1*' \
-    'r-rsqlite=2.1*' \
-    'r-shiny=1.3*' \
+    'r-rsqlite=2.2*' \
+    'r-shiny=1.4*' \
     'r-tidyverse=1.3*' \
     'rpy2=3.1*' \
     && \
@@ -357,6 +363,10 @@ RUN julia -e 'import Pkg; Pkg.update()' && \
 ########################## Dependency: gpulibs #############################
 ############################################################################
 
+# Conda 4.8.3 until iot-salzburg/gpu-jupyter updates the docker-stacks submodule
+RUN conda update conda --no-pin --yes \
+  && conda config --system --set channel_priority flexible
+
 # Install Tensorflow, check compatibility here: https://www.tensorflow.org/install/gpu
 RUN conda install --quiet --yes 'tensorflow-gpu=2.1*' 'keras-gpu' \
 # Install PyTorch with dependencies
@@ -372,16 +382,17 @@ RUN conda install --quiet --yes 'tensorflow-gpu=2.1*' 'keras-gpu' \
 ############################ Useful packages ###############################
 ############################################################################
 
-RUN pip install --upgrade jupyterlab-git==0.10.0 \
-                          folium \
-                          plotly \
+RUN conda install --quiet --yes 'xeus-python=0.7.1' 'ptvsd' -c conda-forge \
+  && pip install --upgrade jupyterlab-git==0.20.0rc0 folium plotly nbdev \
   && export NODE_OPTIONS=--max-old-space-size=4096 \
-  && jupyter labextension install plotlywidget@1.5.4 --no-build \
-  && jupyter labextension install jupyterlab-plotly@1.5.4 --no-build \
+  && jupyter labextension install plotlywidget@4.6.0 --no-build \
+  && jupyter labextension install jupyterlab-plotly@4.6.0 --no-build \
+  && jupyter labextension install @jupyterlab/debugger@0.2.0 --no-build \
   && jupyter serverextension enable --py jupyterlab_git --sys-prefix \
   && jupyter lab build \
   && jupyter labextension list \
   && unset NODE_OPTIONS \
+  && conda clean --all -f -y \
   && fix-permissions $CONDA_DIR \
   && fix-permissions /home/$NB_USER
 
