@@ -383,7 +383,7 @@ RUN conda install --quiet --yes 'tensorflow-gpu=2.1*' 'keras-gpu' \
 ############################################################################
 
 RUN conda install --quiet --yes 'xeus-python=0.7.1' 'ptvsd' -c conda-forge \
-  && pip install --upgrade jupyterlab-git==0.20.0rc0 folium plotly nbdev \
+  && pip install --upgrade jupyterlab-git==0.20.0 folium plotly nbdev \
   && export NODE_OPTIONS=--max-old-space-size=4096 \
   && jupyter labextension install plotlywidget@4.6.0 --no-build \
   && jupyter labextension install jupyterlab-plotly@4.6.0 --no-build \
